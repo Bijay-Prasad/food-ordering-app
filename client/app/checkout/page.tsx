@@ -1,24 +1,28 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, MapPin, Phone, Mail, CreditCard } from 'lucide-react';
-import { toast } from 'sonner';
-import { useCart } from '@/lib/cart-context';
-import Header from '@/components/header';
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, MapPin, Phone, Mail, CreditCard } from "lucide-react";
+import { toast } from "sonner";
+import { useCart } from "@/lib/cart-context";
+import Header from "@/components/header";
+import api from "@/lib/axios";
+import { useRouter } from "next/navigation";
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { items, getTotalPrice, clearCart } = useCart();
   const [deliveryInfo, setDeliveryInfo] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
-    city: '',
-    zip: '',
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    zip: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState('credit-card');
+  const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const subtotal = getTotalPrice();
   const deliveryFee = items.length > 0 ? 3.99 : 0;
@@ -27,25 +31,68 @@ export default function CheckoutPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setDeliveryInfo(prev => ({ ...prev, [name]: value }));
+    setDeliveryInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address || !deliveryInfo.city || !deliveryInfo.zip) {
-      toast.error('Missing required fields', {
-        description: 'Please fill in all required fields to proceed',
+    if (
+      !deliveryInfo.name ||
+      !deliveryInfo.phone ||
+      !deliveryInfo.address ||
+      !deliveryInfo.city ||
+      !deliveryInfo.zip
+    ) {
+      toast.error("Missing required fields", {
+        description: "Please fill in all required fields to proceed",
       });
       return;
     }
-    toast.success('Order placed successfully!', {
-      description: `Order #${Math.floor(Math.random() * 100000)} - Delivering to ${deliveryInfo.address}`,
-    });
+
+    if (items.length === 0) {
+      toast.error("Your cart is empty");
+      return;
+    }
+
     setOrderPlaced(true);
-    clearCart();
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 3000);
+
+    try {
+      // Map cart items to the backend order format
+      const payload = {
+        items: items.map((i) => ({
+          menuItem: i.id, // backend expects menuItem ObjectId
+          quantity: i.quantity,
+        })),
+        paymentMethod,
+        // delivery info can be sent if backend supports it, else backend derives user country
+        deliveryInfo,
+      };
+
+      const res = await api.post("/api/orders", payload);
+      const order = res.data;
+
+      // toast.success('Order placed successfully!');
+      toast.success("Order placed successfully!", {
+        description: `Order #${Math.floor(
+          Math.random() * 100000
+        )} - Delivering to ${deliveryInfo.address}`,
+      });
+      setOrderPlaced(true);
+      clearCart();
+
+      // optional: redirect to order details page if backend returns id
+      if (order && (order._id || order.id)) {
+        setTimeout(() => router.push(`/orders/${order._id || order.id}`), 1200);
+      } else {
+        setTimeout(() => router.push("/"), 1200);
+      }
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message || err.message || "Failed to place order"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (items.length === 0 && !orderPlaced) {
@@ -69,8 +116,12 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="mb-6 text-6xl">✓</div>
-          <h1 className="text-4xl font-bold mb-4 text-orange-500">Order Placed!</h1>
-          <p className="text-neutral-600 text-lg mb-8">Thank you for your order. You will receive updates via SMS.</p>
+          <h1 className="text-4xl font-bold mb-4 text-orange-500">
+            Order Placed!
+          </h1>
+          <p className="text-neutral-600 text-lg mb-8">
+            Thank you for your order. You will receive updates via SMS.
+          </p>
           <Link href="/" className="btn-primary inline-block">
             Back to Home
           </Link>
@@ -82,9 +133,12 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen bg-white">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8">
-        <Link href="/cart" className="flex items-center gap-2 text-orange-500 font-medium hover:underline mb-8">
+        <Link
+          href="/cart"
+          className="flex items-center gap-2 text-orange-500 font-medium hover:underline mb-8"
+        >
           <ArrowLeft size={20} />
           Back to Cart
         </Link>
@@ -99,10 +153,12 @@ export default function CheckoutPage() {
                   <MapPin className="text-orange-500" />
                   Delivery Address
                 </h2>
-                
+
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Full Name *</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Full Name *
+                    </label>
                     <input
                       type="text"
                       name="name"
@@ -116,7 +172,9 @@ export default function CheckoutPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Phone *</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Phone *
+                      </label>
                       <input
                         type="tel"
                         name="phone"
@@ -128,7 +186,9 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Email</label>
+                      <label className="block text-sm font-medium mb-2">
+                        Email
+                      </label>
                       <input
                         type="email"
                         name="email"
@@ -141,7 +201,9 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Street Address *</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Street Address *
+                    </label>
                     <input
                       type="text"
                       name="address"
@@ -155,7 +217,9 @@ export default function CheckoutPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">City *</label>
+                      <label className="block text-sm font-medium mb-2">
+                        City *
+                      </label>
                       <input
                         type="text"
                         name="city"
@@ -167,7 +231,9 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">ZIP Code *</label>
+                      <label className="block text-sm font-medium mb-2">
+                        ZIP Code *
+                      </label>
                       <input
                         type="text"
                         name="zip"
@@ -188,42 +254,51 @@ export default function CheckoutPage() {
                   <CreditCard className="text-orange-500" />
                   Payment Method
                 </h2>
-                
+
                 <div className="space-y-3">
-                  <label className="flex items-center p-4 border-2 border-neutral-200 rounded-lg cursor-pointer hover:border-orange-500" onClick={() => setPaymentMethod('credit-card')}>
+                  <label
+                    className="flex items-center p-4 border-2 border-neutral-200 rounded-lg cursor-pointer hover:border-orange-500"
+                    onClick={() => setPaymentMethod("credit-card")}
+                  >
                     <input
                       type="radio"
                       name="payment"
                       value="credit-card"
-                      checked={paymentMethod === 'credit-card'}
+                      checked={paymentMethod === "credit-card"}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-4 h-4 text-orange-500"
                     />
                     <span className="ml-3 font-medium">Credit Card</span>
                   </label>
 
-                  <label className="flex items-center p-4 border-2 border-neutral-200 rounded-lg cursor-pointer hover:border-orange-500" onClick={() => setPaymentMethod('debit-card')}>
+                  <label
+                    className="flex items-center p-4 border-2 border-neutral-200 rounded-lg cursor-pointer hover:border-orange-500"
+                    onClick={() => setPaymentMethod("debit-card")}
+                  >
                     <input
                       type="radio"
                       name="payment"
                       value="debit-card"
-                      checked={paymentMethod === 'debit-card'}
+                      checked={paymentMethod === "debit-card"}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-4 h-4 text-orange-500"
                     />
                     <span className="ml-3 font-medium">Debit Card</span>
                   </label>
 
-                  <label className="flex items-center p-4 border-2 border-neutral-200 rounded-lg cursor-pointer hover:border-orange-500" onClick={() => setPaymentMethod('paypal')}>
+                  <label
+                    className="flex items-center p-4 border-2 border-neutral-200 rounded-lg cursor-pointer hover:border-orange-500"
+                    onClick={() => setPaymentMethod("paypal")}
+                  >
                     <input
                       type="radio"
                       name="payment"
-                      value="paypal"
-                      checked={paymentMethod === 'paypal'}
+                      value="upi"
+                      checked={paymentMethod === "upi"}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-4 h-4 text-orange-500"
                     />
-                    <span className="ml-3 font-medium">PayPal</span>
+                    <span className="ml-3 font-medium">UPI</span>
                   </label>
                 </div>
               </div>
@@ -238,12 +313,16 @@ export default function CheckoutPage() {
           <div className="lg:col-span-1">
             <div className="card p-6 sticky top-24">
               <h3 className="text-xl font-bold mb-4">Order Summary</h3>
-              
+
               <div className="space-y-3 mb-4 pb-4 border-b border-neutral-200">
-                {items.map(item => (
+                {items.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm">
-                    <span>{item.name} x{item.quantity}</span>
-                    <span className="font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
+                    <span>
+                      {item.name} x{item.quantity}
+                    </span>
+                    <span className="font-semibold">
+                      ${(item.price * item.quantity).toFixed(2)}
+                    </span>
                   </div>
                 ))}
               </div>

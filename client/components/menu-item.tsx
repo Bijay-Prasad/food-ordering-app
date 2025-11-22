@@ -4,6 +4,7 @@ import { ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MenuItemProps {
+  countryCode: string;
   item: {
     id: string;
     name: string;
@@ -14,7 +15,8 @@ interface MenuItemProps {
   onAddToCart: () => void;
 }
 
-export default function MenuItem({ item, onAddToCart }: MenuItemProps) {
+export default function MenuItem({ countryCode, item, onAddToCart }: MenuItemProps) {
+  // console.log("Rendering MenuItem:", item);
   const handleAddToCart = () => {
     toast.success(`${item.name} added to cart!`, {
       description: `$${item.price} - Ready to checkout whenever you are`,
@@ -22,11 +24,13 @@ export default function MenuItem({ item, onAddToCart }: MenuItemProps) {
     onAddToCart();
   };
 
+  // console.log("MenuItem image URL:", item.image);
+
   return (
     <div className="card overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative w-full h-48 bg-neutral-200 overflow-hidden">
         <img
-          src={item.image || "/placeholder.svg"}
+          src={"/"+item.image || "/placeholder.svg"}
           alt={item.name}
           className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
         />
@@ -37,7 +41,7 @@ export default function MenuItem({ item, onAddToCart }: MenuItemProps) {
         <p className="text-sm text-neutral-600 mb-4">{item.description}</p>
         
         <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold text-orange-500">${item.price}</span>
+          <span className="text-2xl font-bold text-orange-500">{countryCode == 'IN' ? '₹' : '$'}{item.price}</span>
           <button
             onClick={handleAddToCart}
             className="btn-primary flex items-center gap-2"

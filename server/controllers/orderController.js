@@ -14,7 +14,14 @@ const createOrder = async (req, res) => {
 
 const getOrders = async (req, res) => {
     const filter = req.user.role === 'ADMIN' ? {} : { country: req.user.country };
-    const orders = await Order.find(filter).populate('items.menuItem');
+    const orders = await Order.find(filter)
+        .populate({ path: 'user', select: 'name email role country' })
+        .populate({
+            path: 'items.menuItem',
+            select: 'name price image restaurant',
+            populate: { path: 'restaurant', select: 'name' }
+        })
+        .exec();
     res.json(orders);
 };
 

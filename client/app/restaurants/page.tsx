@@ -9,22 +9,56 @@ import { logout } from "@/lib/slices/auth-slice";
 import Header from "@/components/header";
 import RestaurantCard from "@/components/restaurant-card";
 import SearchBar from "@/components/search-bar";
-import { restaurants } from "@/lib/mock-data";
+// import { restaurants } from "@/lib/mock-data";
 import { toast } from "sonner";
+import api from "@/lib/axios";
 
 export default function RestaurantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // console.log("Restaurants: ", restaurants);
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth
   );
   const dispatch = useDispatch();
   const router = useRouter();
 
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     router.push("/login");
+  //   }
+  // }, [isAuthenticated, router]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
+      return;
     }
+
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get("/api/restaurants");
+        if (mounted) setRestaurants(res.data || []);
+      } catch (err: any) {
+        toast.error(
+          err?.response?.data?.message ||
+            err.message ||
+            "Failed to load restaurants"
+        );
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
   }, [isAuthenticated, router]);
 
   if (!isAuthenticated) {
@@ -57,10 +91,11 @@ export default function RestaurantsPage() {
 
   return (
     <main className="min-h-screen bg-neutral-50">
+      <Header />
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/restaurants" className="text-2xl font-bold text-primary">
-            Slooze
+            FoodHub
           </Link>
           <div className="flex items-center gap-4">
             <div className="text-right">
@@ -125,8 +160,8 @@ export default function RestaurantsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredRestaurants.map((restaurant) => (
                 <Link
-                  key={restaurant.id}
-                  href={`/restaurant/${restaurant.id}`}
+                  key={restaurant._id}
+                  href={`/restaurant/${restaurant._id}`}
                   className="hover:scale-105 transition-transform duration-200"
                 >
                   <RestaurantCard restaurant={restaurant} />

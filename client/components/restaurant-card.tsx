@@ -1,9 +1,10 @@
-import { Star, Clock, DollarSign } from 'lucide-react';
+import { Star, Clock, DollarSign, IndianRupee } from "lucide-react";
 
 interface RestaurantCardProps {
   restaurant: {
     id: string;
     name: string;
+    country: string;
     cuisine: string;
     rating: number;
     reviews: number;
@@ -28,15 +29,21 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="font-bold text-lg text-neutral-900 mb-1">{restaurant.name}</h3>
+        <h3 className="font-bold text-lg text-neutral-900 mb-1">
+          {restaurant.name}
+        </h3>
         <p className="text-sm text-neutral-600 mb-3">{restaurant.cuisine}</p>
 
         {/* Rating & Reviews */}
         <div className="flex items-center gap-4 mb-3">
           <div className="flex items-center gap-1">
             <Star size={16} className="fill-orange-500 text-orange-500" />
-            <span className="font-semibold text-sm">{restaurant.rating}</span>
-            <span className="text-xs text-neutral-600">({restaurant.reviews})</span>
+            <span className="font-semibold text-sm">
+              {restaurant.rating || 4.5}
+            </span>
+            <span className="text-xs text-neutral-600">
+              ({restaurant.reviews || "1.5K"})
+            </span>
           </div>
         </div>
 
@@ -44,11 +51,21 @@ export default function RestaurantCard({ restaurant }: RestaurantCardProps) {
         <div className="flex items-center justify-between text-sm text-neutral-600">
           <div className="flex items-center gap-1">
             <Clock size={16} />
-            <span>{restaurant.deliveryTime} min</span>
+            <span>{restaurant.deliveryTime || "20"} min</span>
           </div>
           <div className="flex items-center gap-1">
-            <DollarSign size={16} />
-            <span>${restaurant.deliveryFee}</span>
+            {restaurant.country == "India" ? (
+              <IndianRupee size={16} />
+            ) : (
+              <DollarSign size={16} />
+            )}
+            <span>
+              {restaurant.deliveryFee
+                ? restaurant.deliveryFee
+                : restaurant.country == "India"
+                ? "100"
+                : "2.5"}
+            </span>
           </div>
         </div>
       </div>

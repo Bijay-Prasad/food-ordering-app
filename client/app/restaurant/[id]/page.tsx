@@ -1,11 +1,12 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Star, Clock, DollarSign } from "lucide-react";
+import { ArrowLeft, Star, Clock, DollarSign, IndianRupee } from "lucide-react";
 import { restaurants } from "@/lib/mock-data";
 import MenuItem from "@/components/menu-item";
 import { useCart } from "@/lib/cart-context";
+import api from "@/lib/axios";
 
 export default function RestaurantPage({
   params,
@@ -13,9 +14,48 @@ export default function RestaurantPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const restaurant = restaurants.find((r) => r.id === id);
   const { addItem } = useCart();
+  // const restaurant = restaurants.find((r) => r.id === id);
+  const [restaurant, setRestaurant] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchRestaurant = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await api.get(`/api/restaurants/${id}`);
+        if (!mounted) return;
+        setRestaurant(res.data);
+        // console.log("Fetched restaurant:", res.data);
+      } catch (err: any) {
+        if (!mounted) return;
+        setError(
+          err?.response?.data?.message ||
+            err.message ||
+            "Failed to load restaurant"
+        );
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchRestaurant();
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   if (!restaurant) {
     return (
@@ -32,14 +72,16 @@ export default function RestaurantPage({
 
   const handleAddToCart = (item: any) => {
     addItem({
-      id: item.id,
-      restaurantId: restaurant.id,
+      id: item._id || item.id,
+      restaurantId: restaurant._id || restaurant.id,
       restaurantName: restaurant.name,
       name: item.name,
       price: item.price,
       image: item.image,
     });
   };
+
+  // console.log("Fetched restaurant image:", restaurant.image);s
 
   return (
     <main className="min-h-screen bg-white">
@@ -61,7 +103,7 @@ export default function RestaurantPage({
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row gap-8 items-start">
             <img
-              src={restaurant.image || "/placeholder.svg"}
+              src={"/" + restaurant.image || "/placeholder.svg"}
               alt={restaurant.name}
               className="w-full md:w-1/3 h-64 object-cover rounded-lg"
             />
@@ -76,16 +118,26 @@ export default function RestaurantPage({
                   <Star size={20} className="fill-orange-500 text-orange-500" />
                   <span className="font-semibold">{restaurant.rating}</span>
                   <span className="text-neutral-600">
-                    ({restaurant.reviews} reviews)
+                    ({restaurant.reviews || "1.5"} reviews)
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-neutral-600">
                   <Clock size={20} />
-                  <span>{restaurant.deliveryTime} min</span>
+                  <span>{restaurant.deliveryTime || "20"} min</span>
                 </div>
                 <div className="flex items-center gap-2 text-neutral-600">
-                  <DollarSign size={20} />
-                  <span>${restaurant.deliveryFee}</span>
+                  {restaurant.country == "India" ? (
+                    <IndianRupee size={20} />
+                  ) : (
+                    <DollarSign size={20} />
+                  )}
+                  <span>
+                    {restaurant.deliveryFee
+                      ? restaurant.deliveryFee
+                      : restaurant.country == "India"
+                      ? "100"
+                      : "2.5"}
+                  </span>
                 </div>
               </div>
 
@@ -102,9 +154,11 @@ export default function RestaurantPage({
         <h2 className="text-3xl font-bold mb-8">Menu</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {restaurant.menu.map((item) => (
+          {restaurant.menu.map((item: any) => (
+            // console.log("Menu item image:", item),
             <MenuItem
-              key={item.id}
+              key={item._id}
+              countryCode={restaurant.country == "India" ? "IN" : "US"}
               item={item}
               onAddToCart={() => handleAddToCart(item)}
             />

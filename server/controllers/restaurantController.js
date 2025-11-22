@@ -6,4 +6,13 @@ const getRestaurants = async (req, res) => {
     res.json(restaurants);
 };
 
-module.exports = { getRestaurants };
+const getRestaurantById = async (req, res) => {
+    const { id } = req.params;
+    const restaurant = await Restaurant.findById(id).populate('menu');
+    if (!restaurant) {
+        return res.status(404).json({ message: 'Restaurant not found' });
+    }
+    res.json(restaurant);
+};
+
+module.exports = { getRestaurants, getRestaurantById };

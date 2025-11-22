@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
-import { login } from "@/lib/slices/auth-slice";
-import { users } from "@/lib/mock-data";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser, clearError } from "@/lib/slices/auth-slice";
+// import { users } from "@/lib/mock-data";
+import { RootState } from "@/lib/store";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -12,35 +13,50 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const dispatch: any = useDispatch();
   const router = useRouter();
-  const dispatch = useDispatch();
+  const { isAuthenticated, loading, error } = useSelector(
+    (state: RootState) => state.auth
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) router.push("/restaurants");
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const user = users.find(
-        (u) => u.email === email && u.password === password
-      );
+      const user = await dispatch(loginUser({ email, password })).unwrap();
+      setIsLoading(false);
+      // router.push('/restaurants');
 
-      if (!user) {
-        toast.error("Invalid email or password");
-        setIsLoading(false);
-        return;
-      }
+      // if (!user) {
+      //   toast.error("Invalid email or password");
+      //   setIsLoading(false);
+      //   return;
+      // }
 
-      const { password: _, ...userWithoutPassword } = user;
-      dispatch(
-        login({
-          user: userWithoutPassword as any,
-          token: `token_${user.id}_${Date.now()}`,
-        })
-      );
+      // const { password: _, ...userWithoutPassword } = user;
+      // dispatch(
+      //   login({
+      //     user: userWithoutPassword as any,
+      //     token: `token_${user.id}_${Date.now()}`,
+      //   })
+      // );
 
       toast.success(`Welcome back, ${user.name}!`);
       router.push("/restaurants");
     } catch (error) {
+      console.log("Login error:", error);
       toast.error("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
@@ -52,8 +68,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-primary mb-2">Slooze</h1>
-          <p className="text-neutral-600">Food Ordering System</p>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-400 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">F</span>
+            </div>
+            <span className="text-2xl font-bold text-neutral-900">FoodHub</span>
+          </div>
+          {/* <h1 className="text-4xl font-bold text-primary mb-2">Slooze</h1>
+          <p className="text-neutral-600">Food Ordering System</p> */}
         </div>
         {/* <Link href="/" className="flex items-center gap-2">
           <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-400 rounded-lg flex items-center justify-center">
@@ -76,7 +98,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="nick@slooze.com"
+                placeholder="nick@foodhub.com"
                 className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:border-primary transition-colors"
                 required
               />
@@ -115,15 +137,15 @@ export default function LoginPage() {
             <div className="space-y-2 text-sm">
               <p className="text-neutral-600">
                 <span className="font-medium text-neutral-900">Admin:</span>{" "}
-                nick@slooze.com / admin123
+                nick@foodhub.com / admin123
               </p>
               <p className="text-neutral-600">
                 <span className="font-medium text-neutral-900">Manager:</span>{" "}
-                marvel@slooze.com / manager123
+                marvel@foodhub.com / manager123
               </p>
               <p className="text-neutral-600">
                 <span className="font-medium text-neutral-900">Member:</span>{" "}
-                thanos@slooze.com / member123
+                thanos@foodhub.com / member123
               </p>
             </div>
           </div>
